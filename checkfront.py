@@ -8,6 +8,7 @@ from fpdf import FPDF
 import plotly.express as px
 from pathlib import Path
 
+
 # 🔐 Paste your credentials here directly
 API_KEY = "a2eca2ab73617298ae0290a4e077c2d26fbc4421"
 API_TOKEN = "49bab43e8e56e283d8150f733b8d1966c7c16b03f549490356638c2473d7c6ed"
@@ -226,6 +227,56 @@ try:
         df_table = df[table_cols].sort_values("created_date", ascending=False)
         st.dataframe(df_table.style.applymap(highlight_paid, subset=["paid_total"]), use_container_width=True)
         st.download_button("📥 Download Excel", to_excel(df_table), "shoebox_bookings.xlsx")
+    
+    # === NEW COMPARISON CHARTS ===
+    st.markdown("### 📊 Extended Time-Based Comparisons")
+    df["week"] = df["created_date"].dt.to_period("W").apply(lambda r: r.start_time)
+    df["year"] = df["created_date"].dt.year
+    df["week_num"] = df["created_date"].dt.isocalendar().week
+    df["quarter"] = df["created_date"].dt.to_period("Q").astype(str)
+
+    st.subheader("🗓️ Weekly Breakdown by Product/Item")
+    weekly_breakdown = df.groupby(["week", "summary"])["total"].sum().reset_index()
+    st.plotly_chart(
+        px.bar(
+            weekly_breakdown,
+            x="week",
+            y="total",
+            color="summary",
+            title="Weekly Revenue by Product/Item",
+            barmode="group"
+        ),
+        use_container_width=True
+    )
+
+    st.subheader("📉 Weekly Revenue Comparison (Last 3 Years)")
+    weekly_compare = df.groupby(["year", "week_num"])["total"].sum().reset_index()
+    st.plotly_chart(
+        px.line(
+            weekly_compare,
+            x="week_num",
+            y="total",
+            color="year",
+            markers=True,
+            title="Weekly Revenue Trends by Year"
+        ),
+        use_container_width=True
+    )
+
+    st.subheader("📊 Quarterly Revenue Comparison (Last 3 Years)")
+    quarterly_compare = df.groupby(["year", "quarter"])["total"].sum().reset_index()
+    st.plotly_chart(
+        px.bar(
+            quarterly_compare,
+            x="quarter",
+            y="total",
+            color="year",
+            barmode="group",
+            title="Quarterly Revenue Trends by Year"
+        ),
+        use_container_width=True
+    )
+
 
 except Exception as e:
     st.error(f"❌ Error loading dashboard: {e}")
