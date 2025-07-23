@@ -10,9 +10,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
-# 🌍 Manually specify the path to your .env file
-env_path = Path("C:/Users/PC/Documents/UEA/.env")
-load_dotenv(dotenv_path=env_path)
+
+load_dotenv()  # Automatically loads .env from current directory
+
 
 # 🔐 Load API keys from .env
 API_KEY = os.getenv("API_KEY")
