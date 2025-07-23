@@ -205,54 +205,68 @@ try:
     c1, c2 = st.columns(2)
 
     with c1:
-        time_series = df.groupby(df["created_date"].dt.date).size().reset_index(name="Bookings")
-        st.plotly_chart(px.line(time_series, x="created_date", y="Bookings", title=" Bookings Over Time"), use_container_width=True)
+     time_series = df.groupby(df["created_date"].dt.date).size().reset_index(name="Bookings")
+     st.plotly_chart(
+        px.line(time_series, x="created_date", y="Bookings", title=" Bookings Over Time"),
+        use_container_width=True,
+        key="chart_bookings_time"
+    )
 
     with c2:
-        pie = df["status_name"].value_counts().reset_index()
-        pie.columns = ["Status", "Count"]
-        st.plotly_chart(px.pie(pie, names="Status", values="Count", title=" Booking Status Breakdown"), use_container_width=True)
+     pie = df["status_name"].value_counts().reset_index()
+    pie.columns = ["Status", "Count"]
+    st.plotly_chart(
+        px.pie(pie, names="Status", values="Count", title=" Booking Status Breakdown"),
+        use_container_width=True,
+        key="chart_status_pie"
+    )
 
     c3, c4 = st.columns(2)
     with c3:
-        tour_rev = df.groupby("summary")["total"].sum().reset_index().sort_values("total", ascending=False)
-        st.plotly_chart(px.bar(tour_rev, x="summary", y="total", title=" Revenue by Tour", text_auto=True), use_container_width=True)
+     tour_rev = df.groupby("summary")["total"].sum().reset_index().sort_values("total", ascending=False)
+     st.plotly_chart(
+        px.bar(tour_rev, x="summary", y="total", title=" Revenue by Tour", text_auto=True),
+        use_container_width=True,
+        key="chart_revenue_tour"
+    )
 
     with c4:
-        this_month = date.today().replace(day=1)
-        last_month = (this_month - timedelta(days=1)).replace(day=1)
-        this_m = this_month.strftime("%Y-%m")
-        last_m = last_month.strftime("%Y-%m")
-        monthly = df.groupby(["month", "summary"])["total"].sum().reset_index()
-        pivot = monthly.pivot(index="summary", columns="month", values="total").fillna(0)
-        if last_m in pivot.columns and this_m in pivot.columns:
-            pivot["% Change"] = ((pivot[this_m] - pivot[last_m]) / pivot[last_m].replace(0, 1)) * 100
-            mom = pivot.reset_index()[["% Change", this_m, last_m]].rename(columns={"summary": "Tour"})
-            st.plotly_chart(px.bar(mom, x="Tour", y="% Change", title=" Revenue Change MoM"), use_container_width=True)
-        else:
-            st.info("Not enough data for monthly comparison.")
+     this_month = date.today().replace(day=1)
+    last_month = (this_month - timedelta(days=1)).replace(day=1)
+    this_m = this_month.strftime("%Y-%m")
+    last_m = last_month.strftime("%Y-%m")
+    monthly = df.groupby(["month", "summary"])["total"].sum().reset_index()
+    pivot = monthly.pivot(index="summary", columns="month", values="total").fillna(0)
+    if last_m in pivot.columns and this_m in pivot.columns:
+        pivot["% Change"] = ((pivot[this_m] - pivot[last_m]) / pivot[last_m].replace(0, 1)) * 100
+        mom = pivot.reset_index()[["% Change", this_m, last_m]].rename(columns={"summary": "Tour"})
+        st.plotly_chart(
+            px.bar(mom, x="Tour", y="% Change", title=" Revenue Change MoM"),
+            use_container_width=True,
+            key="chart_mom_change"
+        )
+    else:
+        st.info("Not enough data for monthly comparison.")
 
     c5, c6 = st.columns(2)
     with c5:
-        day_counts = df["day"].value_counts().reset_index()
-        day_counts.columns = ["Day", "Count"]
-        st.plotly_chart(px.bar(day_counts, x="Day", y="Count", title=" Bookings by Day"), use_container_width=True)
+     day_counts = df["day"].value_counts().reset_index()
+    day_counts.columns = ["Day", "Count"]
+    st.plotly_chart(
+        px.bar(day_counts, x="Day", y="Count", title=" Bookings by Day"),
+        use_container_width=True,
+        key="chart_by_day"
+    )
     with c6:
-        hour_counts = df["hour"].value_counts().sort_index().reset_index()
-        hour_counts.columns = ["Hour", "Count"]
-        st.plotly_chart(px.bar(hour_counts, x="Hour", y="Count", title=" Bookings by Hour"), use_container_width=True)
+     hour_counts = df["hour"].value_counts().sort_index().reset_index()
+    hour_counts.columns = ["Hour", "Count"]
+    st.plotly_chart(
+        px.bar(hour_counts, x="Hour", y="Count", title=" Bookings by Hour"),
+        use_container_width=True,
+        key="chart_by_hour"
+    )
 
-    def highlight_paid(val):
-        return 'background-color: #ccffcc' if val > 0 else ''
-
-    with st.expander(" Detailed Booking Table"):
-        table_cols = ["booking_id", "code", "status_name", "created_date",
-                      "customer_name", "customer_email", "summary", "total", "paid_total"]
-        df_table = df[table_cols].sort_values("created_date", ascending=False)
-        st.dataframe(df_table.style.applymap(highlight_paid, subset=["paid_total"]), use_container_width=True)
-        st.download_button("📥 Download Excel", to_excel(df_table), "shoebox_bookings.xlsx")
-    
-    # === NEW COMPARISON CHARTS ===
+# NEW COMPARISON CHARTS
     st.markdown("###  Extended Time-Based Comparisons")
     df["week"] = df["created_date"].dt.to_period("W").apply(lambda r: r.start_time)
     df["year"] = df["created_date"].dt.year
@@ -262,58 +276,48 @@ try:
     st.subheader(" Weekly Breakdown by Product/Item")
     weekly_breakdown = df.groupby(["week", "summary"])["total"].sum().reset_index()
     st.plotly_chart(
-        px.bar(
-            weekly_breakdown,
-            x="week",
-            y="total",
-            color="summary",
-            title="Weekly Revenue by Product/Item",
-            barmode="group"
-        ),
-        use_container_width=True
-    )
+    px.bar(
+        weekly_breakdown,
+        x="week",
+        y="total",
+        color="summary",
+        title="Weekly Revenue by Product/Item",
+        barmode="group"
+    ),
+    use_container_width=True,
+    key="chart_weekly_breakdown"
+)
 
     st.subheader(" Weekly Revenue Comparison (Last 3 Years)")
     weekly_compare = df.groupby(["year", "week_num"])["total"].sum().reset_index()
     st.plotly_chart(
-        px.line(
-            weekly_compare,
-            x="week_num",
-            y="total",
-            color="year",
-            markers=True,
-            title="Weekly Revenue Trends by Year"
-        ),
-        use_container_width=True
-    )
+    px.line(
+        weekly_compare,
+        x="week_num",
+        y="total",
+        color="year",
+        markers=True,
+        title="Weekly Revenue Trends by Year"
+    ),
+    use_container_width=True,
+    key="chart_weekly_trend"
+)
 
     st.subheader(" Quarterly Revenue Comparison (Last 3 Years)")
     quarterly_compare = df.groupby(["year", "quarter"])["total"].sum().reset_index()
     st.plotly_chart(
-        px.bar(
-            quarterly_compare,
-            x="quarter",
-            y="total",
-            color="year",
-            barmode="group",
-            title="Quarterly Revenue Trends by Year"
-        ),
-        use_container_width=True
-    )
-    
-    st.subheader(" Quarterly Revenue Comparison (Last 3 Years)")
-    quarterly_compare = df.groupby(["year", "quarter"])["total"].sum().reset_index()
-    st.plotly_chart(
-        px.bar(
-            quarterly_compare,
-            x="quarter",
-            y="total",
-            color="year",
-            barmode="group",
-            title="Quarterly Revenue Trends by Year"
-        ),
-        use_container_width=True
-    )
+    px.bar(
+        quarterly_compare,
+        x="quarter",
+        y="total",
+        color="year",
+        barmode="group",
+        title="Quarterly Revenue Trends by Year"
+    ),
+    use_container_width=True,
+    key="chart_quarterly_trend"
+)
+
     
     try:
      st.markdown("###  Stock Availability & Missed Revenue (Next 30 Days)")
