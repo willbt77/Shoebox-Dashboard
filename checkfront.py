@@ -1,10 +1,23 @@
-# 🔐 Manually specify the path to your .env file
+import streamlit as st
+import requests
+import pandas as pd
+import base64
+from datetime import datetime, timedelta
+from io import BytesIO
+from fpdf import FPDF
+import plotly.express as px
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# 🌍 Manually specify the path to your .env file
 env_path = Path("C:/Users/PC/Documents/UEA/.env")
 load_dotenv(dotenv_path=env_path)
 
-# ✅ Now read the values
+# 🔐 Load API keys from .env
 API_KEY = os.getenv("API_KEY")
 API_TOKEN = os.getenv("API_TOKEN")
+
 
 # 🔍 Optional: Debug print to verify values are loaded (remove after testing)
 print("🔍 API_KEY loaded:", repr(API_KEY))
