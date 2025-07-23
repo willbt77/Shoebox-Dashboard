@@ -200,53 +200,46 @@ try:
     )
 
 
-    # Charts
-    st.markdown("###  Insights")
-    c1, c2 = st.columns(2)
+    # --- Charts Section ---
+    st.markdown("### 📈 Insights")
 
-    with c1:
-     time_series = df.groupby(df["created_date"].dt.date).size().reset_index(name="Bookings")
-     st.plotly_chart(
-        px.line(time_series, x="created_date", y="Bookings", title=" Bookings Over Time"),
-        use_container_width=True,
-        key="chart_bookings_time"
-    )
+    # First row
+    col1, col2 = st.columns(2)
 
-    with c2:
-     pie = df["status_name"].value_counts().reset_index()
-    pie.columns = ["Status", "Count"]
-    st.plotly_chart(
-        px.pie(pie, names="Status", values="Count", title=" Booking Status Breakdown"),
-        use_container_width=True,
-        key="chart_status_pie"
-    )
+    with col1:
+        time_series = df.groupby(df["created_date"].dt.date).size().reset_index(name="Bookings")
+        fig1 = px.line(time_series, x="created_date", y="Bookings", title="📅 Bookings Over Time")
+        st.plotly_chart(fig1, use_container_width=True, key="chart_bookings_time")
 
-    c3, c4 = st.columns(2)
-    with c3:
-     tour_rev = df.groupby("summary")["total"].sum().reset_index().sort_values("total", ascending=False)
-     st.plotly_chart(
-        px.bar(tour_rev, x="summary", y="total", title=" Revenue by Tour", text_auto=True),
-        use_container_width=True,
-        key="chart_revenue_tour"
-    )
+    with col2:
+        pie = df["status_name"].value_counts().reset_index()
+        pie.columns = ["Status", "Count"]
+        fig2 = px.pie(pie, names="Status", values="Count", title="📌 Booking Status Breakdown")
+        st.plotly_chart(fig2, use_container_width=True, key="chart_status_pie")
 
-    with c4:
-     this_month = date.today().replace(day=1)
-    last_month = (this_month - timedelta(days=1)).replace(day=1)
-    this_m = this_month.strftime("%Y-%m")
-    last_m = last_month.strftime("%Y-%m")
-    monthly = df.groupby(["month", "summary"])["total"].sum().reset_index()
-    pivot = monthly.pivot(index="summary", columns="month", values="total").fillna(0)
-    if last_m in pivot.columns and this_m in pivot.columns:
-        pivot["% Change"] = ((pivot[this_m] - pivot[last_m]) / pivot[last_m].replace(0, 1)) * 100
-        mom = pivot.reset_index()[["% Change", this_m, last_m]].rename(columns={"summary": "Tour"})
-        st.plotly_chart(
-            px.bar(mom, x="Tour", y="% Change", title=" Revenue Change MoM"),
-            use_container_width=True,
-            key="chart_mom_change"
-        )
-    else:
-        st.info("Not enough data for monthly comparison.")
+    # Second row
+    col3, col4 = st.columns(2)
+
+    with col3:
+        tour_rev = df.groupby("summary")["total"].sum().reset_index().sort_values("total", ascending=False)
+        fig3 = px.bar(tour_rev, x="summary", y="total", title="💰 Revenue by Tour", text_auto=True)
+        st.plotly_chart(fig3, use_container_width=True, key="chart_revenue_tour")
+
+    with col4:
+        this_month = date.today().replace(day=1)
+        last_month = (this_month - timedelta(days=1)).replace(day=1)
+        this_m = this_month.strftime("%Y-%m")
+        last_m = last_month.strftime("%Y-%m")
+        monthly = df.groupby(["month", "summary"])["total"].sum().reset_index()
+        pivot = monthly.pivot(index="summary", columns="month", values="total").fillna(0)
+
+        if last_m in pivot.columns and this_m in pivot.columns:
+            pivot["% Change"] = ((pivot[this_m] - pivot[last_m]) / pivot[last_m].replace(0, 1)) * 100
+            mom = pivot.reset_index()[["% Change", this_m, last_m]].rename(columns={"summary": "Tour"})
+            fig4 = px.bar(mom, x="Tour", y="% Change", title="📊 Revenue Change MoM")
+            st.plotly_chart(fig4, use_container_width=True, key="chart_mom_change")
+        else:
+            st.info("Not enough data for monthly comparison.")
 
     c5, c6 = st.columns(2)
     with c5:
