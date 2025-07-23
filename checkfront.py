@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from io import BytesIO
 from fpdf import FPDF
 import plotly.express as px
