@@ -1,15 +1,3 @@
-import streamlit as st
-import requests
-import pandas as pd
-import base64
-from datetime import date, timedelta, datetime
-from io import BytesIO
-from fpdf import FPDF
-import plotly.express as px
-from pathlib import Path
-from dotenv import load_dotenv
-import os
-
 # 🔐 Manually specify the path to your .env file
 env_path = Path("C:/Users/PC/Documents/UEA/.env")
 load_dotenv(dotenv_path=env_path)
