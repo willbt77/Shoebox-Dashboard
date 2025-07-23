@@ -201,20 +201,20 @@ try:
 
 
     # --- Charts Section ---
-    st.markdown("### 📈 Insights")
+    st.markdown("### Insights")
 
     # First row
     col1, col2 = st.columns(2)
 
     with col1:
         time_series = df.groupby(df["created_date"].dt.date).size().reset_index(name="Bookings")
-        fig1 = px.line(time_series, x="created_date", y="Bookings", title="📅 Bookings Over Time")
+        fig1 = px.line(time_series, x="created_date", y="Bookings", title="Bookings Over Time")
         st.plotly_chart(fig1, use_container_width=True, key="chart_bookings_time")
 
     with col2:
         pie = df["status_name"].value_counts().reset_index()
         pie.columns = ["Status", "Count"]
-        fig2 = px.pie(pie, names="Status", values="Count", title="📌 Booking Status Breakdown")
+        fig2 = px.pie(pie, names="Status", values="Count", title=" Booking Status Breakdown")
         st.plotly_chart(fig2, use_container_width=True, key="chart_status_pie")
 
     # Second row
@@ -222,7 +222,7 @@ try:
 
     with col3:
         tour_rev = df.groupby("summary")["total"].sum().reset_index().sort_values("total", ascending=False)
-        fig3 = px.bar(tour_rev, x="summary", y="total", title="💰 Revenue by Tour", text_auto=True)
+        fig3 = px.bar(tour_rev, x="summary", y="total", title="Revenue by Tour", text_auto=True)
         st.plotly_chart(fig3, use_container_width=True, key="chart_revenue_tour")
 
     with col4:
