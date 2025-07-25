@@ -270,7 +270,7 @@ try:
 
 
         # --- Charts Section ---
-    st.markdown("### 📈 Insights")
+    st.markdown("### Insights")
 
     # First row
     col1, col2 = st.columns(2)
@@ -324,7 +324,7 @@ try:
     )
 
     st.plotly_chart(fig_monthly, use_container_width=True)
-    st.caption("This bar chart shows the total revenue collected for each calendar month in the selected date range, including months with no bookings.")
+    st.caption("This bar chart shows the total revenue collected for each calendar month in the selected date range, using the date tours were booked")
 
 
     c5, c6 = st.columns(2)
