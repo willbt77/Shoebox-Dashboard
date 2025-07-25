@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import base64
-from datetime import datetime, timedelta, date
+from datetime import date, timedelta, datetime
 from io import BytesIO
 from fpdf import FPDF
 import plotly.express as px
@@ -10,14 +10,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
+# 🔐 Manually specify the path to your .env file
+env_path = Path("C:/Users/PC/Documents/UEA/.env")
+load_dotenv(dotenv_path=env_path)
 
-load_dotenv()  # Automatically loads .env from current directory
-
-
-# 🔐 Load API keys from .env
+# ✅ Now read the values
 API_KEY = os.getenv("API_KEY")
 API_TOKEN = os.getenv("API_TOKEN")
-
 
 # 🔍 Optional: Debug print to verify values are loaded (remove after testing)
 print("🔍 API_KEY loaded:", repr(API_KEY))
@@ -42,6 +41,13 @@ def fetch_bookings(start_date, end_date):
     res = requests.get(url, headers=headers, params=params)
     res.raise_for_status()
     return res.json()
+
+def fetch_booking_details(booking_id):
+ url = f"https://theshoebox-dev.checkfront.co.uk/api/3.0/booking/{booking_id}"
+ headers = get_auth_header()
+ res = requests.get(url, headers=headers)
+ res.raise_for_status()
+ return res.json()
 
 def to_excel(df):
     output = BytesIO()
@@ -137,6 +143,68 @@ try:
     raw = fetch_bookings(start, end)
     bookings = list(raw.get("booking/index", {}).values())
     df = pd.DataFrame(bookings)
+    
+    # Add ticket quantity column
+    df["ticket_qty"] = 0
+
+# Safely fetch ticket quantities for each booking
+    for i, row in df.iterrows():
+     try:
+        details = fetch_booking_details(row["booking_id"])
+        booking_info = details.get("booking", {})
+        items = booking_info.get("items", [])
+
+        if isinstance(items, dict):
+            items = list(items.values())
+        elif not isinstance(items, list):
+            items = []
+
+        total_qty = 0
+        for item in items:
+            qty = item.get("qty", 0)
+            try:
+                total_qty += int(qty)
+            except (ValueError, TypeError):
+                continue  # Skip non-numeric qty
+
+        df.at[i, "ticket_qty"] = total_qty
+
+     except Exception as e:
+        st.warning(f"Couldn't fetch tickets for booking {row['booking_id']}: {e}")
+
+
+    
+    # Add a column for ticket quantity (default to 0)
+    df["ticket_qty"] = 0
+
+# Loop through each booking to get detailed ticket count (safe handling)
+    for i, row in df.iterrows():
+     try:
+        details = fetch_booking_details(row["booking_id"])
+        booking_info = details.get("booking", {})
+        items = booking_info.get("items", [])
+
+        # Normalize items to a list of dicts
+        if isinstance(items, dict):
+            items = list(items.values())
+        elif isinstance(items, str) or not isinstance(items, list):
+            items = []  # Unexpected structure, skip this entry
+
+        total_qty = 0
+        for item in items:
+          qty = item.get("qty", 0)
+        try:
+         total_qty += int(qty)
+        except (ValueError, TypeError):
+         continue  # skip if not a number
+
+
+        df.at[i, "ticket_qty"] = total_qty
+
+     except Exception as e:
+        st.warning(f"Couldn't fetch tickets for booking {row['booking_id']}: {e}")
+
+
 
     if df.empty:
         st.warning("No bookings found.")
@@ -149,6 +217,7 @@ try:
     df["month"] = df["created_date"].dt.to_period("M")
     df["day"] = df["created_date"].dt.day_name()
     df["hour"] = df["created_date"].dt.hour
+    df["summary"] = df["summary"].astype(str).str.strip()
 
     if status_filter != "All":
         df = df[df["status_name"] == status_filter]
@@ -200,30 +269,33 @@ try:
     )
 
 
-    # --- Charts Section ---
-    st.markdown("### Insights")
+        # --- Charts Section ---
+    st.markdown("### 📈 Insights")
 
     # First row
     col1, col2 = st.columns(2)
 
     with col1:
         time_series = df.groupby(df["created_date"].dt.date).size().reset_index(name="Bookings")
-        fig1 = px.line(time_series, x="created_date", y="Bookings", title="Bookings Over Time")
+        fig1 = px.line(time_series, x="created_date", y="Bookings", title="📅 Bookings Over Time")
         st.plotly_chart(fig1, use_container_width=True, key="chart_bookings_time")
+        st.caption("This line chart shows the total number of bookings made per day over the selected date range.")
 
     with col2:
         pie = df["status_name"].value_counts().reset_index()
         pie.columns = ["Status", "Count"]
-        fig2 = px.pie(pie, names="Status", values="Count", title=" Booking Status Breakdown")
+        fig2 = px.pie(pie, names="Status", values="Count", title="📌 Booking Status Breakdown")
         st.plotly_chart(fig2, use_container_width=True, key="chart_status_pie")
+        st.caption("This pie chart shows the proportion of bookings by their current status (e.g., Paid, Web-Pre-Booking, Waiting, Deposit).")
 
     # Second row
     col3, col4 = st.columns(2)
 
     with col3:
         tour_rev = df.groupby("summary")["total"].sum().reset_index().sort_values("total", ascending=False)
-        fig3 = px.bar(tour_rev, x="summary", y="total", title="Revenue by Tour", text_auto=True)
+        fig3 = px.bar(tour_rev, x="summary", y="total", title="💰 Revenue by Tour", text_auto=True)
         st.plotly_chart(fig3, use_container_width=True, key="chart_revenue_tour")
+        st.caption("This bar chart breaks down total revenue generated per tour during the selected date range.")
 
     with col4:
         this_month = date.today().replace(day=1)
@@ -238,8 +310,11 @@ try:
             mom = pivot.reset_index()[["% Change", this_m, last_m]].rename(columns={"summary": "Tour"})
             fig4 = px.bar(mom, x="Tour", y="% Change", title="📊 Revenue Change MoM")
             st.plotly_chart(fig4, use_container_width=True, key="chart_mom_change")
+            st.caption("This chart shows the percentage change in monthly revenue for each tour between the current and previous month.")
         else:
             st.info("Not enough data for monthly comparison.")
+
+
 
     c5, c6 = st.columns(2)
     with c5:
@@ -312,33 +387,32 @@ try:
 )
 
     
+   # === STOCK AVAILABILITY & MISSED REVENUE ===
+    st.markdown("## 🧮 Stock Availability & Missed Revenue")
+    st.caption("Filtered to tours only. Booked ticket totals are now based on number of tickets sold, not just bookings.")
+
+    stock_start = st.date_input("Start Date for Stock Analysis", value=date.today())
+    stock_end = st.date_input("End Date for Stock Analysis", value=date.today() + timedelta(days=30))
+
+    num_days = (stock_end - stock_start).days + 1
+
+
     try:
-     st.markdown("###  Stock Availability & Missed Revenue (Next 30 Days)")
-     st.caption("Each product is assumed to have 12 slots per day. Fixed prices are used as estimates.")
+     df["summary"] = df["summary"].astype(str).str.strip()
+     df["event_date"] = pd.to_datetime(df["date_desc"], errors="coerce")
+    
+    # Filter date range for stock analysis
+     df_stock = df[(df["event_date"] >= pd.Timestamp(stock_start)) & (df["event_date"] <= pd.Timestamp(stock_end))].copy()
+    
+    # Exclude meeting room entries
+     df_stock = df_stock[~df_stock["summary"].str.contains("Meeting Room", case=False, na=False)]
 
-    # Define all expected products
-     all_products = [
-        "Norwich's Hidden Street Tour",
-        "The Chronicles of Christmas",
-        "The TIPSY Tavern Trail Tour",
-        "The Tavern Trail Tour",
-        "The Norwich Knowledge Tour",
-        "City of Centuries Tour",
-        "The Matriarchs, Mayors & Merchants Tour",
-        "Secrets of the Tunnels - Thrilling underground escape game",
-        "Full Day Hire (9:30 AM - 5:30 PM) - Meeting Room",
-        "Morning Hire (9 AM - 1 PM) - Meeting Room",
-        "Afternoon Hire (1:30 PM - 5:30 PM) - Meeting Room",
-        "1 Hour Hire - Meeting Room",
-        "30 Minute Hire - Meeting Room",
-        "2 Hour Hire - Meeting Room",
-        "3 Hour Hire - Meeting Room",
-        "EXCLUSIVE EVENT - Meet the Weavers Underground Tour",
-        "HERITAGE OPEN DAYS - Meet the Weavers Underground Tour",
-        "Private talks"
-    ]
+    # Dynamic list of all valid tour names
+     all_products = sorted(df_stock["summary"].dropna().unique())
+     
 
-    # Fixed product pricing (estimate for sandbox)
+
+    # Estimated prices for each tour (can add more if needed)
      product_prices = {
         "Norwich's Hidden Street Tour": 15.00,
         "The Chronicles of Christmas": 10.00,
@@ -348,74 +422,66 @@ try:
         "City of Centuries Tour": 13.00,
         "The Matriarchs, Mayors & Merchants Tour": 14.00,
         "Secrets of the Tunnels - Thrilling underground escape game": 16.00,
-        "Full Day Hire (9:30 AM - 5:30 PM) - Meeting Room": 80.00,
-        "Morning Hire (9 AM - 1 PM) - Meeting Room": 40.00,
-        "Afternoon Hire (1:30 PM - 5:30 PM) - Meeting Room": 40.00,
-        "1 Hour Hire - Meeting Room": 20.00,
-        "30 Minute Hire - Meeting Room": 10.00,
-        "2 Hour Hire - Meeting Room": 30.00,
-        "3 Hour Hire - Meeting Room": 45.00,
-        "EXCLUSIVE EVENT - Meet the Weavers Underground Tour": 20.00,
-        "HERITAGE OPEN DAYS - Meet the Weavers Underground Tour": 0.00,
-        "Private talks": 0.00
+        "Magnificent Marble Hall": 14.00  # ✅ Add new tour price here
     }
 
-    # Convert event date
-     df["event_date"] = pd.to_datetime(df["date_desc"], errors="coerce")
-
-    # Filter for next 30 days
-     today = pd.Timestamp.today().normalize()
-     future_30 = today + pd.Timedelta(days=30)
-     df_future = df[(df["event_date"] >= today) & (df["event_date"] <= future_30)].copy()
-
-    # Build stock overview
-     assumed_daily_capacity = 12
      stock_rows = []
 
      for product in all_products:
-            bookings = df_future[df_future["summary"] == product]
-            booked = bookings.shape[0]
+      product_df = df_stock[df_stock["summary"] == product]
+      tickets_booked = product_df["ticket_qty"].fillna(0).sum()
 
-            # Determine if it's a room product
-            if "Meeting Room" in product or "Room Hire" in product:
-                daily_capacity = 1
-            else:
-                daily_capacity = 12
+      daily_capacity = 12  # default per tour per day
+      total_capacity = daily_capacity * num_days  # make sure num_days is defined
 
-            capacity = daily_capacity * 30
-            available = capacity - booked
-            avg_price = product_prices.get(product, 0)
-            lost_revenue = available * avg_price
+      available = total_capacity - tickets_booked
+      avg_price = product_prices.get(product, 0)
+      lost_revenue = available * avg_price
 
-            stock_rows.append({
-                "Product": product,
-                "Booked": booked,
-                "30-Day Capacity": capacity,
-                "Available": available,
-                "Price (£)": avg_price,
-                "Potential Revenue Lost (£)": round(lost_revenue, 2)
-            })
+      stock_rows.append({
+        "Product": product,
+        "Booked Tickets": tickets_booked,
+        "Capacity": total_capacity,
+        "Available": available,
+        "Price (£)": avg_price,
+        "Potential Revenue Lost (£)": round(lost_revenue, 2)
+    })
+
 
 
      stock_df = pd.DataFrame(stock_rows)
 
-     with st.expander(" Full 30-Day Stock & Revenue Table"):
+     with st.expander("📋 Full Stock & Revenue Table"):
         st.dataframe(stock_df)
+        
+     stock_df["Product"] = stock_df["Product"].astype(str).str.strip()
+   
 
      st.plotly_chart(
-        px.bar(stock_df, x="Product", y=["Booked", "Available"], barmode="stack", title=" 30-Day Stock vs Booked"),
+        px.bar(
+            stock_df,
+            x="Product",
+            y=["Booked Tickets", "Available"],
+            barmode="stack",
+            title="🎟️ Stock vs Tickets Booked"
+        ),
         use_container_width=True
     )
 
      st.plotly_chart(
-        px.bar(stock_df, x="Product", y="Potential Revenue Lost (£)", title=" 30-Day Potential Revenue Lost", text_auto=True),
+        px.bar(
+            stock_df,
+            x="Product",
+            y="Potential Revenue Lost (£)",
+            title="💸 Potential Revenue Lost",
+            text_auto=True
+        ),
         use_container_width=True
     )
-
 
     except Exception as e:
-        st.warning("⚠️ Could not parse 'date_desc' for event filtering.")
-        st.error(f"Error: {e}")
+     st.warning("⚠️ Error calculating stock and lost revenue.")
+     st.error(f"Error: {e}")
 
 
  # === PRODUCT FILTERING ===
