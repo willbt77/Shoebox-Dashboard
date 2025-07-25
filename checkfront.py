@@ -298,22 +298,33 @@ try:
         st.caption("This bar chart breaks down total revenue generated per tour during the selected date range.")
 
     with col4:
-        this_month = date.today().replace(day=1)
-        last_month = (this_month - timedelta(days=1)).replace(day=1)
-        this_m = this_month.strftime("%Y-%m")
-        last_m = last_month.strftime("%Y-%m")
-        monthly = df.groupby(["month", "summary"])["total"].sum().reset_index()
-        pivot = monthly.pivot(index="summary", columns="month", values="total").fillna(0)
+    # Ensure month column
+     df["month"] = df["created_date"].dt.to_period("M")
 
-        if last_m in pivot.columns and this_m in pivot.columns:
-            pivot["% Change"] = ((pivot[this_m] - pivot[last_m]) / pivot[last_m].replace(0, 1)) * 100
-            mom = pivot.reset_index()[["% Change", this_m, last_m]].rename(columns={"summary": "Tour"})
-            fig4 = px.bar(mom, x="Tour", y="% Change", title=" Revenue Change MoM")
-            st.plotly_chart(fig4, use_container_width=True, key="chart_mom_change")
-            st.caption("This chart shows the percentage change in monthly revenue for each tour between the current and previous month.")
-        else:
-            st.info("Not enough data for monthly comparison.")
+    # Generate all months between selected range
+    all_months = pd.period_range(start=start, end=end, freq='M')
 
+    # Aggregate revenue per month
+    monthly_revenue = df.groupby(df["created_date"].dt.to_period("M"))["total"].sum()
+
+    # Reindex to ensure missing months are shown with 0
+    monthly_revenue = monthly_revenue.reindex(all_months, fill_value=0).reset_index()
+    monthly_revenue.columns = ["Month", "Total Revenue"]
+
+    # Format month names for display (e.g., "Jul 2025")
+    monthly_revenue["Month"] = monthly_revenue["Month"].dt.strftime("%b %Y")
+
+    # Plot
+    fig_monthly = px.bar(
+        monthly_revenue,
+        x="Month",
+        y="Total Revenue",
+        title="📆 Total Monthly Revenue",
+        text_auto=True
+    )
+
+    st.plotly_chart(fig_monthly, use_container_width=True)
+    st.caption("This bar chart shows the total revenue collected for each calendar month in the selected date range, including months with no bookings.")
 
 
     c5, c6 = st.columns(2)
