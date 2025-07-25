@@ -277,14 +277,14 @@ try:
 
     with col1:
         time_series = df.groupby(df["created_date"].dt.date).size().reset_index(name="Bookings")
-        fig1 = px.line(time_series, x="created_date", y="Bookings", title="📅 Bookings Over Time")
+        fig1 = px.line(time_series, x="created_date", y="Bookings", title=" Bookings Over Time")
         st.plotly_chart(fig1, use_container_width=True, key="chart_bookings_time")
         st.caption("This line chart shows the total number of bookings made per day over the selected date range.")
 
     with col2:
         pie = df["status_name"].value_counts().reset_index()
         pie.columns = ["Status", "Count"]
-        fig2 = px.pie(pie, names="Status", values="Count", title="📌 Booking Status Breakdown")
+        fig2 = px.pie(pie, names="Status", values="Count", title=" Booking Status Breakdown")
         st.plotly_chart(fig2, use_container_width=True, key="chart_status_pie")
         st.caption("This pie chart shows the proportion of bookings by their current status (e.g., Paid, Web-Pre-Booking, Waiting, Deposit).")
 
@@ -293,7 +293,7 @@ try:
 
     with col3:
         tour_rev = df.groupby("summary")["total"].sum().reset_index().sort_values("total", ascending=False)
-        fig3 = px.bar(tour_rev, x="summary", y="total", title="💰 Revenue by Tour", text_auto=True)
+        fig3 = px.bar(tour_rev, x="summary", y="total", title=" Revenue by Tour", text_auto=True)
         st.plotly_chart(fig3, use_container_width=True, key="chart_revenue_tour")
         st.caption("This bar chart breaks down total revenue generated per tour during the selected date range.")
 
@@ -308,7 +308,7 @@ try:
         if last_m in pivot.columns and this_m in pivot.columns:
             pivot["% Change"] = ((pivot[this_m] - pivot[last_m]) / pivot[last_m].replace(0, 1)) * 100
             mom = pivot.reset_index()[["% Change", this_m, last_m]].rename(columns={"summary": "Tour"})
-            fig4 = px.bar(mom, x="Tour", y="% Change", title="📊 Revenue Change MoM")
+            fig4 = px.bar(mom, x="Tour", y="% Change", title=" Revenue Change MoM")
             st.plotly_chart(fig4, use_container_width=True, key="chart_mom_change")
             st.caption("This chart shows the percentage change in monthly revenue for each tour between the current and previous month.")
         else:
@@ -388,7 +388,7 @@ try:
 
     
    # === STOCK AVAILABILITY & MISSED REVENUE ===
-    st.markdown("## 🧮 Stock Availability & Missed Revenue")
+    st.markdown("##  Stock Availability & Missed Revenue")
     st.caption("Filtered to tours only. Booked ticket totals are now based on number of tickets sold, not just bookings.")
 
     stock_start = st.date_input("Start Date for Stock Analysis", value=date.today())
@@ -422,7 +422,7 @@ try:
         "City of Centuries Tour": 13.00,
         "The Matriarchs, Mayors & Merchants Tour": 14.00,
         "Secrets of the Tunnels - Thrilling underground escape game": 16.00,
-        "Magnificent Marble Hall": 14.00  # ✅ Add new tour price here
+        "Magnificent Marble Hall": 14.00  
     }
 
      stock_rows = []
@@ -463,7 +463,7 @@ try:
             x="Product",
             y=["Booked Tickets", "Available"],
             barmode="stack",
-            title="🎟️ Stock vs Tickets Booked"
+            title="Stock vs Tickets Booked"
         ),
         use_container_width=True
     )
@@ -473,7 +473,7 @@ try:
             stock_df,
             x="Product",
             y="Potential Revenue Lost (£)",
-            title="💸 Potential Revenue Lost",
+            title="Potential Revenue Lost",
             text_auto=True
         ),
         use_container_width=True
@@ -485,7 +485,7 @@ try:
 
 
  # === PRODUCT FILTERING ===
-    st.markdown("### 🔍 Product & Category Filters (Optional View)")
+    st.markdown("###  Product & Category Filters (Optional View)")
 
     # Product filter
     product_options = ["All"] + sorted(df["summary"].dropna().unique())
